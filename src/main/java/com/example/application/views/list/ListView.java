@@ -2,6 +2,7 @@ package com.example.application.views.list;
 
 import com.example.application.data.entity.Contact;
 import com.example.application.data.service.CrmService;
+import com.example.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
@@ -16,13 +17,13 @@ import com.vaadin.flow.theme.lumo.LumoUtility.Margin;
 import jakarta.annotation.security.PermitAll;
 import org.springframework.context.annotation.Scope;
 
-import java.awt.*;
+
 import java.util.Collections;
 
 
 
 @PageTitle("Contacts | Vaadin CRM")
-@Route(value = "")
+@Route(value = "", layout = MainLayout.class)
 public class ListView extends VerticalLayout {
     Grid<Contact> grid = new Grid<>(Contact.class);
     TextField filterText = new TextField();
@@ -45,8 +46,16 @@ public class ListView extends VerticalLayout {
         );
 
         updateList();
+        closeEditor();
 
 
+
+    }
+
+    private void closeEditor() {
+        form.setContact(null);
+        form.setVisible(false);
+        removeClassName("editing");
     }
 
     private void updateList() {
@@ -68,6 +77,23 @@ public class ListView extends VerticalLayout {
         form = new ContactForm(service.findALlCompanies(), service.findAllStatuses());
         form.setWidth("25em");
 
+        form.addSaveListener(this::saveContact);
+        form.addDeleteListener(this::deleteContact);
+        form.addCloseListener(e-> closeEditor());
+
+
+    }
+
+    private void deleteContact(ContactForm.DeleteEvent event) {
+        service.deleteContact(event.getContact());
+        updateList();
+        closeEditor();
+    }
+
+    private void saveContact(ContactForm.SaveEvent event){
+        service.saveContact(event.getContact());
+        updateList();
+        closeEditor();
     }
 
     private Component getToolbar() {
@@ -76,7 +102,11 @@ public class ListView extends VerticalLayout {
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValidationStatusChangeListener(e -> updateList());
 
+
+
         Button addContactButton = new Button ("Add contact");
+        addContactButton.addClickListener(e -> addContact());
+
         HorizontalLayout toolbar = new HorizontalLayout(filterText, addContactButton);
         toolbar.addClassName("toolbar");
         return toolbar;
@@ -91,6 +121,27 @@ public class ListView extends VerticalLayout {
 
 
 
+        grid.asSingleSelect().addValueChangeListener(e -> editContact(e.getValue()));
+
+
+
+    }
+
+    private void addContact() {
+        grid.asSingleSelect().clear();
+        editContact(new Contact());
+
+
+    }
+
+    private void editContact(Contact contact) {
+        if (contact == null){
+            closeEditor();
+        }else{
+            form.setContact(contact);
+            form.setVisible(true);
+            addClassName("editing");
+        }
     }
 
 }
